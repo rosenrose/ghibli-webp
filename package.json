@@ -1,0 +1,25 @@
+{
+  "name": "ghibli-webp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://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@github.com/rosenrose/ghibli-webp.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rosenrose/ghibli-webp/issues"
+  },
+  "homepage": "https://github.com/rosenrose/ghibli-webp#readme",
+  "dependencies": {
+    "@ffmpeg/core": "^0.10.0",
+    "@ffmpeg/ffmpeg": "^0.10.1",
+    "express": "^4.17.3",
+    "require": "^0.4.4"
+  }
+}
