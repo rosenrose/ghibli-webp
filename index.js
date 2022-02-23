@@ -31,7 +31,7 @@ io.on("connection", (socket) => {
     ffmpeg.load().then(() => {
       ffmpeg.FS("mkdir", "webp");
       ffmpeg.setProgress((progress) => {
-        progress.id = FFmpeg.id;
+        progress.id = FFmpeg.sid;
         socket.emit("progress", progress);
       });
       socket.emit("load");
