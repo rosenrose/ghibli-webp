@@ -37,7 +37,7 @@ io.on("connection", (socket) => {
   }
 
   socket.on("webp", (params, done) => {
-    runWebp(params, socket).then((webp) => {
+    runWebp(ffmpeg, params, socket).then((webp) => {
       done(webp);
       clear();
     });
@@ -52,7 +52,7 @@ io.on("connection", (socket) => {
   });
 });
 
-async function runWebp(params, socket) {
+async function runWebp(ffmpeg, params, socket) {
   const { time, title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
   const downloadPromises = [];
   let downloadCount = 1;
