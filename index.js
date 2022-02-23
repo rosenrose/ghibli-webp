@@ -26,7 +26,11 @@ io.on("connection", (socket) => {
   const FFmpeg = requireUncached("@ffmpeg/ffmpeg", socket.id);
   console.log(FFmpeg.sid, "connected");
   const { createFFmpeg, fetchFile } = FFmpeg;
+  createFFmpeg.sid = FFmpeg.sid;
+  console.log(createFFmpeg.sid, "assigned");
   const ffmpeg = createFFmpeg({ log: false });
+  ffmpeg.sid = createFFmpeg.sid;
+  console.log(ffmpeg.sid, "created");
 
   if (!ffmpeg.isLoaded()) {
     ffmpeg.load().then(() => {
