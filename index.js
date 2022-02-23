@@ -1,6 +1,8 @@
 const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
+const { createFFmpeg, fetchFile } = requireUncached("@ffmpeg/ffmpeg");
+const { createFFmpeg2, fetchFile2 } = requireUncached("@ffmpeg/ffmpeg");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -112,8 +114,9 @@ function getRandomInt(minInclude, maxExclude) {
 }
 
 function requireUncached(module) {
-  console.log("before", require.cache);
+  console.log("before", Object.keys(require.cache).length);
+  console.log(require.cache[require.resolve(module)]);
   delete require.cache[require.resolve(module)];
-  console.log("after", require.cache);
+  console.log("after", Object.keys(require.cache).length);
   return require(module);
 }
