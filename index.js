@@ -1,7 +1,6 @@
 const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
-const { createFFmpeg, fetchFile } = require("@ffmpeg/ffmpeg");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,6 +23,7 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", (socket) => {
+  const { createFFmpeg, fetchFile } = require("@ffmpeg/ffmpeg");
   const ffmpeg = createFFmpeg({ log: true });
 
   if (!ffmpeg.isLoaded()) {
