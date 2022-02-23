@@ -9,6 +9,9 @@ app.get("/", (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.send(`<h1>Test port: ${PORT}</h1>`);
 });
+app.get("/*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
+});
 
 const httpServer = http.createServer(app);
 httpServer.listen(PORT);
@@ -25,11 +28,11 @@ io.on("connection", (socket) => {
 
   if (!ffmpeg.isLoaded()) {
     ffmpeg.load().then(() => {
-      socket.emit("load");
       ffmpeg.FS("mkdir", "webp");
       ffmpeg.setProgress((progress) => {
         socket.emit("progress", progress);
       });
+      socket.emit("load");
     });
   }
 
