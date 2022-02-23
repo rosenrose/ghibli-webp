@@ -35,16 +35,18 @@ io.on("connection", async (socket) => {
   if (!ffmpeg.isLoaded()) {
     await ffmpeg.load();
     ffmpeg.FS("mkdir", "webp");
-    ffmpeg.setProgress((progress) => {
-      progress.id = socket.id;
-      socket.emit("progress", progress);
-      console.log(socket.id, progress);
-    });
-    // ffmpeg.setLogger((log) => {
-    //   if (log.type == "fferr") {
-    //     console.log(socket.id, log.message);
-    //   }
+    // ffmpeg.setProgress((progress) => {
+    //   progress.id = socket.id;
+    //   socket.emit("progress", progress);
+    //   console.log(socket.id, progress);
     // });
+    ffmpeg.setLogger((log) => {
+      log.id = socket.id;
+      if (log.type == "fferr") {
+        socket.emit("progress", log);
+        console.log(socket.id, log.message);
+      }
+    });
     socket.emit("load");
   }
 
