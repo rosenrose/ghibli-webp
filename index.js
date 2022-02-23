@@ -25,35 +25,55 @@ io.on("connection", async (socket) => {
 
   if (!ffmpeg.isLoaded()) {
     await ffmpeg.load();
+    ffmpeg.FS("mkdir", "webp");
+    ffmpeg.setProgress((progress) => {
+      socket.emit("progress", progress);
+    });
   }
 
-  socket.on("webp", (done) => {
-    runWebp(ffmpeg);
-    done();
+  socket.on("webp", (params, done) => {
+    runWebp(params, socket).then((webp) => {
+      done(webp);
+      clear();
+    });
+  });
+
+  socket.on("disconnecting", () => {
+    ffmpeg.exit();
+  });
+
+  socket.on("disconnect", () => {
+    clear();
   });
 });
 
-async function runWebp(ffmpeg) {
-  const time = Date.now().toString();
-  const rand = getRandomInt(100, 1000);
-  const outputName = "a.webp";
+async function runWebp(params, socket) {
+  const { time, title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
   const downloadPromises = [];
+  let downloadCount = 1;
 
-  ffmpeg.FS("mkdir", time);
-  for (let i = 0; i < 18; i++) {
-    let name = `${(rand + i).toString().padStart(5, "0")}.jpg`;
+  ffmpeg.FS("mkdir", `webp/${time}`);
+  for (let i = 0; i < Math.min(parseInt(duration), 84); i++) {
+    const filename = `${(cut + i).toString().padStart(5, "0")}.jpg`;
 
     downloadPromises.push(
       new Promise((resolve) => {
-        axios(encodeURI(`https://d2wwh0934dzo2k.cloudfront.net/ghibli/07 붉은 돼지 (1992)/${name}`), {
+        axios(encodeURI(`${cloud}/${title}/${filename}`), {
           responseType: "arraybuffer",
         }).then((response) => {
-          ffmpeg.FS("writeFile", `${time}/${name}`, response.data);
+          ffmpeg.FS("writeFile", `webp/${time}/${filename}`, response.data);
+          socket.emit("download", downloadCount++);
           resolve();
         });
       })
     );
   }
+
+  const command =
+    webpGif === "webp"
+      ? ["-vf", `scale=${webpWidth}:-1`, "-loop", "0", "-preset", "drawing", "-qscale", "90"]
+      : ["-lavfi", `split[a][b];[a]scale=${gifWidth}:-1,palettegen[p];[b]scale=${gifWidth}:-1[g];[g][p]paletteuse`];
+
   await Promise.all(downloadPromises);
   await ffmpeg.run(
     "-framerate",
@@ -61,14 +81,27 @@ async function runWebp(ffmpeg) {
     "-pattern_type",
     "glob",
     "-i",
-    `${time}/*.jpg`,
-    "-vf",
-    "scale=720:-1",
-    "-loop",
-    "0",
-    `${time}/${outputName}`
+    `webp/${time}/*.jpg`,
+    ...command,
+    `webp/${time}/output.${webpGif}`
   );
-  const webp = ffmpeg.FS("readFile", `${time}/${outputName}`);
+
+  return ffmpeg.FS("readFile", `webp/${time}/output.${webpGif}`).buffer;
+}
+
+function clear() {
+  ffmpeg
+    .FS("readdir", "webp")
+    .filter((dir) => !dir.startsWith("."))
+    .forEach((dir) => {
+      ffmpeg
+        .FS("readdir", `webp/${dir}`)
+        .filter((file) => !file.startsWith("."))
+        .forEach((file) => {
+          ffmpeg.FS("unlink", `webp/${dir}/${file}`);
+        });
+      ffmpeg.FS("rmdir", `webp/${dir}`);
+    });
 }
 
 function getRandomInt(minInclude, maxExclude) {
