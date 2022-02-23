@@ -25,15 +25,15 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  const { createFFmpeg, fetchFile } = requireUncached("@ffmpeg/ffmpeg");
+  const FFmpeg = requireUncached("@ffmpeg/ffmpeg", socket.id);
+  const { createFFmpeg, fetchFile } = FFmpeg;
   const ffmpeg = createFFmpeg({ log: false });
-  ffmpeg.id = socket.id;
 
   if (!ffmpeg.isLoaded()) {
     ffmpeg.load().then(() => {
       ffmpeg.FS("mkdir", "webp");
       ffmpeg.setProgress((progress) => {
-        progress.id = ffmpeg.id;
+        progress.id = FFmpeg.id;
         socket.emit("progress", progress);
       });
       socket.emit("load");
@@ -113,10 +113,12 @@ function getRandomInt(minInclude, maxExclude) {
   return Math.floor(Math.random() * (maxExclude - minInclude)) + minInclude;
 }
 
-function requireUncached(module) {
+function requireUncached(module, id) {
   console.log("before", Object.keys(require.cache).length);
   console.log(require.cache[require.resolve(module)]);
   delete require.cache[require.resolve(module)];
   console.log("after", Object.keys(require.cache).length);
-  return require(module);
+  let temp = require(module);
+  temp.id = id;
+  return temp;
 }
