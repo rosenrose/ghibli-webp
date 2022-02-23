@@ -25,12 +25,13 @@ const io = require("socket.io")(httpServer, {
 io.on("connection", (socket) => {
   const { createFFmpeg, fetchFile } = require("@ffmpeg/ffmpeg");
   const ffmpeg = createFFmpeg({ log: true });
+  ffmpeg.id = socket.id;
 
   if (!ffmpeg.isLoaded()) {
     ffmpeg.load().then(() => {
       ffmpeg.FS("mkdir", "webp");
       ffmpeg.setProgress((progress) => {
-        console.log(progress);
+        progress.id = ffmpeg.id;
         socket.emit("progress", progress);
       });
       socket.emit("load");
