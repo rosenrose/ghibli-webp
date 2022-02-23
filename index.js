@@ -1,4 +1,3 @@
-const fs = require("fs");
 const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
@@ -22,21 +21,15 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", async (socket) => {
-  let queue = false;
   const ffmpeg = createFFmpeg({ log: true });
 
-  ffmpeg.load().then(() => {
-    if (queue) {
-      runWebp(ffmpeg);
-    }
-  });
+  if (!ffmpeg.isLoaded()) {
+    await ffmpeg.load();
+  }
 
   socket.on("webp", (done) => {
-    if (ffmpeg.isLoaded()) {
-      runWebp(ffmpeg);
-    } else {
-      queue = true;
-    }
+    runWebp(ffmpeg);
+    done();
   });
 });
 
