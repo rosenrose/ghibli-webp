@@ -202,15 +202,20 @@ module.exports = (_options = {}) => {
       throw NO_LOAD;
     } else {
       running = false;
-      try {
-        Core.exit(1);
-      } catch (e) {
-        log(e.message);
-      } finally {
-        Core = null;
-        ffmpeg = null;
-        runResolve = null;
-      }
+      Core.exit(1);
+      Core = null;
+      ffmpeg = null;
+      runResolve = null;
+    }
+  };
+
+  const destroy = () => {
+    if (Core === null) {
+      throw NO_LOAD;
+    } else {
+      Core = null;
+      ffmpeg = null;
+      runResolve = null;
     }
   };
 
@@ -235,6 +240,7 @@ module.exports = (_options = {}) => {
     isLoaded,
     run,
     exit,
+    destroy,
     FS,
   };
 };
