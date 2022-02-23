@@ -23,7 +23,7 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  const { createFFmpeg, fetchFile } = require("@ffmpeg/ffmpeg");
+  const { createFFmpeg, fetchFile } = requireUncached("@ffmpeg/ffmpeg");
   const ffmpeg = createFFmpeg({ log: true });
   ffmpeg.id = socket.id;
 
@@ -109,4 +109,9 @@ function clear(ffmpeg) {
 
 function getRandomInt(minInclude, maxExclude) {
   return Math.floor(Math.random() * (maxExclude - minInclude)) + minInclude;
+}
+
+function requireUncached(module) {
+  delete require.cache[require.resolve(module)];
+  return require(module);
 }
