@@ -39,7 +39,7 @@ io.on("connection", (socket) => {
   socket.on("webp", (params, done) => {
     runWebp(ffmpeg, params, socket).then((webp) => {
       done(webp);
-      clear(ffmpeg);
+      // clear(ffmpeg);
     });
   });
 
@@ -48,7 +48,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    clear(ffmpeg);
+    // clear(ffmpeg);
   });
 });
 
