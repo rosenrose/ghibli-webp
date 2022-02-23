@@ -1,6 +1,7 @@
 const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
+const createFFmpeg = require("./customCreateFFmpeg");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,30 +24,21 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", async (socket) => {
-  const FFmpeg = requireUncached("@ffmpeg/ffmpeg", socket.id);
-  console.log(FFmpeg.sid, "connected");
-  const { createFFmpeg, fetchFile } = FFmpeg;
-  createFFmpeg.sid = socket.id;
-  console.log(createFFmpeg.sid, "assigned");
-  const ffmpeg = createFFmpeg({ log: false });
-  ffmpeg.sid = socket.id;
-  console.log(ffmpeg.sid, "created");
+  const ffmpeg = createFFmpeg({ log: true });
 
   if (!ffmpeg.isLoaded()) {
     await ffmpeg.load();
     ffmpeg.FS("mkdir", "webp");
     ffmpeg.setProgress((progress) => {
-      progress.id = socket.id;
       socket.emit("progress", progress);
-      console.log(socket.id, progress);
     });
-    ffmpeg.setLogger((log) => {
-      log.id = socket.id;
-      if (log.type == "fferr") {
-        socket.emit("log", log);
-        console.log(socket.id, log.message);
-      }
-    });
+    // ffmpeg.setLogger((log) => {
+    //   const { type, message } = log;
+    //   // if (log.type == "fferr") {
+    //   // socket.emit("log", log);
+    //   console.log(id, `[${type}] ${message}`);
+    //   // }
+    // });
     socket.emit("load");
   }
 
@@ -61,8 +53,6 @@ io.on("connection", async (socket) => {
     clear(ffmpeg);
   });
 });
-
-function handleProgress(progress) {}
 
 async function runWebp(ffmpeg, params, socket) {
   const { time, title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
@@ -123,14 +113,4 @@ function clear(ffmpeg) {
 
 function getRandomInt(minInclude, maxExclude) {
   return Math.floor(Math.random() * (maxExclude - minInclude)) + minInclude;
-}
-
-function requireUncached(module, sid) {
-  // console.log("before", Object.keys(require.cache).length);
-  // console.log(require.cache[require.resolve(module)]);
-  delete require.cache[require.resolve(module)];
-  // console.log("after", Object.keys(require.cache).length);
-  let temp = require(module);
-  temp.sid = sid;
-  return temp;
 }
