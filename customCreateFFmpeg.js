@@ -205,6 +205,7 @@ module.exports = (_options = {}) => {
       try {
         Core.exit(1);
       } catch (e) {
+        log(e.message);
       } finally {
         Core = null;
         ffmpeg = null;
