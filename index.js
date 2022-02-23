@@ -25,7 +25,7 @@ const io = require("socket.io")(httpServer, {
 io.on("connection", (socket) => {
   const FFmpeg = requireUncached("@ffmpeg/ffmpeg", socket.id);
   const { createFFmpeg, fetchFile } = FFmpeg;
-  const ffmpeg = createFFmpeg({ log: false });
+  const ffmpeg = createFFmpeg({ log: true });
 
   if (!ffmpeg.isLoaded()) {
     ffmpeg.load().then(() => {
@@ -49,6 +49,8 @@ io.on("connection", (socket) => {
     clear(ffmpeg);
   });
 });
+
+function handleProgress(progress) {}
 
 async function runWebp(ffmpeg, params, socket) {
   const { time, title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
@@ -112,10 +114,10 @@ function getRandomInt(minInclude, maxExclude) {
 }
 
 function requireUncached(module, sid) {
-  console.log("before", Object.keys(require.cache).length);
-  console.log(require.cache[require.resolve(module)]);
+  // console.log("before", Object.keys(require.cache).length);
+  // console.log(require.cache[require.resolve(module)]);
   delete require.cache[require.resolve(module)];
-  console.log("after", Object.keys(require.cache).length);
+  // console.log("after", Object.keys(require.cache).length);
   let temp = require(module);
   temp.sid = sid;
   return temp;
