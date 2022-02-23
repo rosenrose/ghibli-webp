@@ -25,7 +25,7 @@ const io = require("socket.io")(httpServer, {
 io.on("connection", (socket) => {
   const FFmpeg = requireUncached("@ffmpeg/ffmpeg", socket.id);
   const { createFFmpeg, fetchFile } = FFmpeg;
-  const ffmpeg = createFFmpeg({ log: true });
+  const ffmpeg = createFFmpeg({ log: false });
 
   if (!ffmpeg.isLoaded()) {
     ffmpeg.load().then(() => {
@@ -33,6 +33,11 @@ io.on("connection", (socket) => {
       ffmpeg.setProgress((progress) => {
         progress.id = FFmpeg.sid;
         socket.emit("progress", progress);
+      });
+      ffmpeg.setLogger((log) => {
+        if (log.type == "fferr") {
+          console.log(FFmpeg.sid, log.message);
+        }
       });
       socket.emit("load");
     });
