@@ -24,7 +24,7 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", async (socket) => {
-  let ffmpeg = createFFmpeg({ log: true });
+  const ffmpeg = createFFmpeg({ log: true });
 
   if (!ffmpeg.isLoaded()) {
     await ffmpeg.load();
@@ -51,7 +51,7 @@ io.on("connection", async (socket) => {
 
   socket.on("disconnect", () => {
     clear(ffmpeg);
-    ffmpeg = null;
+    ffmpeg.exit();
   });
 });
 
