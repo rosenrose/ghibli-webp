@@ -36,12 +36,12 @@ io.on("connection", async (socket) => {
     await ffmpeg.load();
     ffmpeg.FS("mkdir", "webp");
     ffmpeg.setProgress((progress) => {
-      progress.id = FFmpeg.sid;
+      progress.id = ffmpeg.sid;
       socket.emit("progress", progress);
     });
     ffmpeg.setLogger((log) => {
       if (log.type == "fferr") {
-        console.log(FFmpeg.sid, log.message);
+        console.log(ffmpeg.sid, log.message);
       }
     });
     socket.emit("load");
