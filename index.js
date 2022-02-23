@@ -24,6 +24,7 @@ const io = require("socket.io")(httpServer, {
 
 io.on("connection", (socket) => {
   const FFmpeg = requireUncached("@ffmpeg/ffmpeg", socket.id);
+  console.log(FFmpeg.sid, "connected");
   const { createFFmpeg, fetchFile } = FFmpeg;
   const ffmpeg = createFFmpeg({ log: false });
 
