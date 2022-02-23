@@ -111,12 +111,12 @@ function getRandomInt(minInclude, maxExclude) {
   return Math.floor(Math.random() * (maxExclude - minInclude)) + minInclude;
 }
 
-function requireUncached(module, id) {
+function requireUncached(module, sid) {
   console.log("before", Object.keys(require.cache).length);
   console.log(require.cache[require.resolve(module)]);
   delete require.cache[require.resolve(module)];
   console.log("after", Object.keys(require.cache).length);
   let temp = require(module);
-  temp.id = id;
+  temp.sid = sid;
   return temp;
 }
