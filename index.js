@@ -112,6 +112,8 @@ function getRandomInt(minInclude, maxExclude) {
 }
 
 function requireUncached(module) {
+  console.log("before", require.cache);
   delete require.cache[require.resolve(module)];
+  console.log("after", require.cache);
   return require(module);
 }
