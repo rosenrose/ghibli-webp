@@ -35,15 +35,15 @@ io.on("connection", async (socket) => {
   if (!ffmpeg.isLoaded()) {
     await ffmpeg.load();
     ffmpeg.FS("mkdir", "webp");
-    // ffmpeg.setProgress((progress) => {
-    //   progress.id = socket.id;
-    //   socket.emit("progress", progress);
-    //   console.log(socket.id, progress);
-    // });
+    ffmpeg.setProgress((progress) => {
+      progress.id = socket.id;
+      socket.emit("progress", progress);
+      console.log(socket.id, progress);
+    });
     ffmpeg.setLogger((log) => {
       log.id = socket.id;
       if (log.type == "fferr") {
-        socket.emit("progress", log);
+        socket.emit("log", log);
         console.log(socket.id, log.message);
       }
     });
@@ -92,7 +92,6 @@ async function runWebp(ffmpeg, params, socket) {
       : ["-lavfi", `split[a][b];[a]scale=${gifWidth}:-1,palettegen[p];[b]scale=${gifWidth}:-1[g];[g][p]paletteuse`];
 
   await Promise.all(downloadPromises);
-  console.log(socket.id, "download finish");
   await ffmpeg.run(
     "-framerate",
     "12",
@@ -103,7 +102,6 @@ async function runWebp(ffmpeg, params, socket) {
     ...command,
     `webp/${time}/output.${webpGif}`
   );
-  console.log(socket.id, "run finish");
 
   return ffmpeg.FS("readFile", `webp/${time}/output.${webpGif}`).buffer;
 }
