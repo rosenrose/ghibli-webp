@@ -1,8 +1,6 @@
 const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
-const { createFFmpeg, fetchFile } = requireUncached("@ffmpeg/ffmpeg");
-const { createFFmpeg2, fetchFile2 } = requireUncached("@ffmpeg/ffmpeg");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
