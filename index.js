@@ -22,7 +22,7 @@ const io = require("socket.io")(httpServer, {
   },
 });
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   const FFmpeg = requireUncached("@ffmpeg/ffmpeg", socket.id);
   console.log(FFmpeg.sid, "connected");
   const { createFFmpeg, fetchFile } = FFmpeg;
@@ -33,19 +33,18 @@ io.on("connection", (socket) => {
   console.log(ffmpeg.sid, "created");
 
   if (!ffmpeg.isLoaded()) {
-    ffmpeg.load().then(() => {
-      ffmpeg.FS("mkdir", "webp");
-      ffmpeg.setProgress((progress) => {
-        progress.id = FFmpeg.sid;
-        socket.emit("progress", progress);
-      });
-      ffmpeg.setLogger((log) => {
-        if (log.type == "fferr") {
-          console.log(FFmpeg.sid, log.message);
-        }
-      });
-      socket.emit("load");
+    await ffmpeg.load();
+    ffmpeg.FS("mkdir", "webp");
+    ffmpeg.setProgress((progress) => {
+      progress.id = FFmpeg.sid;
+      socket.emit("progress", progress);
     });
+    ffmpeg.setLogger((log) => {
+      if (log.type == "fferr") {
+        console.log(FFmpeg.sid, log.message);
+      }
+    });
+    socket.emit("load");
   }
 
   socket.on("webp", (params, done) => {
