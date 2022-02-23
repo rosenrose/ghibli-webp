@@ -92,6 +92,7 @@ async function runWebp(ffmpeg, params, socket) {
       : ["-lavfi", `split[a][b];[a]scale=${gifWidth}:-1,palettegen[p];[b]scale=${gifWidth}:-1[g];[g][p]paletteuse`];
 
   await Promise.all(downloadPromises);
+  console.log(socket.id, "download finish");
   await ffmpeg.run(
     "-framerate",
     "12",
@@ -102,6 +103,7 @@ async function runWebp(ffmpeg, params, socket) {
     ...command,
     `webp/${time}/output.${webpGif}`
   );
+  console.log(socket.id, "run finish");
 
   return ffmpeg.FS("readFile", `webp/${time}/output.${webpGif}`).buffer;
 }
