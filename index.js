@@ -51,6 +51,7 @@ io.on("connection", async (socket) => {
 
   socket.on("disconnect", () => {
     clear(ffmpeg);
+    ffmpeg = null;
   });
 });
 
