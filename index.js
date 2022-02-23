@@ -39,7 +39,7 @@ io.on("connection", (socket) => {
   socket.on("webp", (params, done) => {
     runWebp(ffmpeg, params, socket).then((webp) => {
       done(webp);
-      clear();
+      clear(ffmpeg);
     });
   });
 
@@ -48,7 +48,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    clear();
+    clear(ffmpeg);
   });
 });
 
@@ -94,7 +94,7 @@ async function runWebp(ffmpeg, params, socket) {
   return ffmpeg.FS("readFile", `webp/${time}/output.${webpGif}`).buffer;
 }
 
-function clear() {
+function clear(ffmpeg) {
   ffmpeg
     .FS("readdir", "webp")
     .filter((dir) => !dir.startsWith("."))
