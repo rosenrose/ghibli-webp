@@ -38,12 +38,13 @@ io.on("connection", async (socket) => {
     ffmpeg.setProgress((progress) => {
       progress.id = socket.id;
       socket.emit("progress", progress);
+      console.log(socket.id, progress);
     });
-    ffmpeg.setLogger((log) => {
-      if (log.type == "fferr") {
-        console.log(socket.id, log.message);
-      }
-    });
+    // ffmpeg.setLogger((log) => {
+    //   if (log.type == "fferr") {
+    //     console.log(socket.id, log.message);
+    //   }
+    // });
     socket.emit("load");
   }
 
