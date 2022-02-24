@@ -26,6 +26,7 @@ module.exports = (_options = {}) => {
   let duration = 0;
   let ratio = 0;
   let customLogger = () => {};
+  let socket = null;
 
   const log = (type, message) => {
     customLogger({ type, message });
@@ -50,7 +51,7 @@ module.exports = (_options = {}) => {
       if (message.startsWith("  Duration")) {
         const ts = message.split(", ")[0].split(": ")[1];
         const d = ts2sec(ts);
-        progress({ duration: d, ratio });
+        progress({ duration: d, ratio }, socket);
         if (duration === 0 || duration > d) {
           duration = d;
         }
@@ -58,9 +59,9 @@ module.exports = (_options = {}) => {
         const ts = message.split("time=")[1].split(" ")[0];
         const t = ts2sec(ts);
         ratio = t / duration;
-        progress({ ratio, time: t });
+        progress({ ratio, time: t }, socket);
       } else if (message.startsWith("video:")) {
-        progress({ ratio: 1 });
+        progress({ ratio: 1 }, socket);
         duration = 0;
         ratio = 0;
       }
@@ -246,6 +247,10 @@ module.exports = (_options = {}) => {
 
   const isRunning = () => running;
 
+  const setSocket = (_socket) => {
+    socket = _socket;
+  };
+
   log("info", `use ffmpeg.wasm v${version}`);
 
   return {
@@ -259,5 +264,6 @@ module.exports = (_options = {}) => {
     destroy,
     FS,
     isRunning,
+    setSocket,
   };
 };

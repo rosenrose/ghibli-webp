@@ -40,13 +40,11 @@ io.on("connection", async (socket) => {
         break;
       }
     } else {
-      ffmpegList[i].selected = true;
       console.log(i, "load");
       await ffmpegList[i].load();
       ffmpegList[i].FS("mkdir", "webp");
-      ffmpegList[i].setProgress((progress) => {
-        socket.emit("progress", progress);
-      });
+      ffmpegList[i].setProgress(handleProgress);
+      ffmpegList[i].setSocket(socket);
       // ffmpegList[i].setLogger((log) => {
       //   const { type, message } = log;
       //   // if (log.type == "fferr") {
@@ -54,8 +52,6 @@ io.on("connection", async (socket) => {
       //   console.log(id, `[${type}] ${message}`);
       //   // }
       // });
-      socket.emit("ready", i);
-      break;
     }
   }
 
@@ -72,7 +68,6 @@ io.on("connection", async (socket) => {
       .filter((ffmpeg) => ffmpeg.isLoaded() && !ffmpeg.isRunning())
       .forEach((ffmpeg) => {
         clear(ffmpeg);
-        ffmpeg.selected = false;
       });
   });
 
@@ -82,6 +77,10 @@ io.on("connection", async (socket) => {
     console.log(ffmpegList.length);
   });
 });
+
+function handleProgress(progress, socket) {
+  socket.emit("progress", progress);
+}
 
 async function runWebp(ffmpeg, params, socket) {
   const { time, title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
@@ -138,6 +137,8 @@ function clear(ffmpeg) {
         });
       ffmpeg.FS("rmdir", `webp/${dir}`);
     });
+  ffmpeg.selected = false;
+  ffmpeg.setSocket(null);
 }
 
 function getRandomInt(minInclude, maxExclude) {
