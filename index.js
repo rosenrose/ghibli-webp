@@ -30,10 +30,11 @@ const io = require("socket.io")(httpServer, {
 io.on("connection", async (socket) => {
   for (let i = 0; ; i = (i + 1) % ffmpegList.length) {
     if (ffmpegList[i].isLoaded()) {
-      if (ffmpegList[i].isRunning()) {
+      if (ffmpegList[i].isRunning() || ffmpegList[i].selected) {
         console.log(i, "running");
         continue;
       } else {
+        ffmpegList[i].selected = true;
         console.log(i, "ready");
         socket.emit("ready", i);
         break;
@@ -61,11 +62,17 @@ io.on("connection", async (socket) => {
     runWebp(ffmpegList[i], params, socket).then((webp) => {
       done(webp);
       clear(ffmpegList[i]);
+      ffmpegList[i].selected = false;
     });
   });
 
   socket.on("disconnect", () => {
-    ffmpegList.filter((ffmpeg) => ffmpeg.isLoaded() && !ffmpeg.isRunning()).forEach((ffmpeg) => clear(ffmpeg));
+    ffmpegList
+      .filter((ffmpeg) => ffmpeg.isLoaded() && !ffmpeg.isRunning())
+      .forEach((ffmpeg) => {
+        clear(ffmpeg);
+        ffmpeg.selected = false;
+      });
   });
 
   socket.on("test", () => {
