@@ -28,13 +28,15 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", async (socket) => {
-  for (let i = 0; ; i = (i + 1) % ffmpegList.length) {
+  for (let i = 0; ; ) {
     if (ffmpegList[i].isLoaded()) {
       if (ffmpegList[i].isRunning() || ffmpegList[i].selected) {
         console.log(i, "running");
+        i = (i + 1) % ffmpegList.length;
         continue;
       } else {
         ffmpegList[i].selected = true;
+        ffmpegList[i].setSocket(socket);
         console.log(i, "ready");
         socket.emit("ready", i);
         break;
@@ -44,7 +46,6 @@ io.on("connection", async (socket) => {
       await ffmpegList[i].load();
       ffmpegList[i].FS("mkdir", "webp");
       ffmpegList[i].setProgress(handleProgress);
-      ffmpegList[i].setSocket(socket);
       // ffmpegList[i].setLogger((log) => {
       //   const { type, message } = log;
       //   // if (log.type == "fferr") {
@@ -59,7 +60,6 @@ io.on("connection", async (socket) => {
     runWebp(ffmpegList[i], params, socket).then((webp) => {
       done(webp);
       clear(ffmpegList[i]);
-      ffmpegList[i].selected = false;
     });
   });
 
