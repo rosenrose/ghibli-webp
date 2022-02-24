@@ -40,6 +40,7 @@ io.on("connection", async (socket) => {
         break;
       }
     } else {
+      ffmpegList[i].selected = true;
       console.log(i, "load");
       await ffmpegList[i].load();
       ffmpegList[i].FS("mkdir", "webp");
