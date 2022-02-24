@@ -3,7 +3,7 @@ const express = require("express");
 const axios = require("axios").default;
 const createFFmpeg = require("./customCreateFFmpeg");
 const ffmpegList = [];
-while (ffmpegList.length < 6) {
+while (ffmpegList.length < 3) {
   ffmpegList.push(createFFmpeg());
 }
 
