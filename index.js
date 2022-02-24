@@ -29,43 +29,43 @@ const io = require("socket.io")(httpServer, {
 
 io.on("connection", async (socket) => {
   for (let i = 0; ; i = (i + 1) % ffmpegList.length) {
-    if (ffmpeg.isLoaded()) {
-      if (ffmpeg.isRunning()) {
+    if (ffmpegList[i].isLoaded()) {
+      if (ffmpegList[i].isRunning()) {
         console.log(i, "running");
         continue;
       } else {
         console.log(i, "ready");
-        socket.emit("ready");
+        socket.emit("ready", i);
         break;
       }
     } else {
       console.log(i, "load");
-      await ffmpeg.load();
-      ffmpeg.FS("mkdir", "webp");
-      ffmpeg.setProgress((progress) => {
+      await ffmpegList[i].load();
+      ffmpegList[i].FS("mkdir", "webp");
+      ffmpegList[i].setProgress((progress) => {
         socket.emit("progress", progress);
       });
-      // ffmpeg.setLogger((log) => {
+      // ffmpegList[i].setLogger((log) => {
       //   const { type, message } = log;
       //   // if (log.type == "fferr") {
       //   // socket.emit("log", log);
       //   console.log(id, `[${type}] ${message}`);
       //   // }
       // });
-      socket.emit("ready");
+      socket.emit("ready", i);
       break;
     }
   }
 
-  socket.on("webp", (params, done) => {
-    runWebp(ffmpeg, params, socket).then((webp) => {
+  socket.on("webp", (i, params, done) => {
+    runWebp(ffmpegList[i], params, socket).then((webp) => {
       done(webp);
-      clear(ffmpeg);
+      clear(ffmpegList[i]);
     });
   });
 
   socket.on("disconnect", () => {
-    clear(ffmpeg);
+    ffmpegList.filter((ffmpeg) => ffmpeg.isLoaded() && !ffmpeg.isRunning()).forEach((ffmpeg) => clear(ffmpeg));
   });
 
   socket.on("test", () => {
