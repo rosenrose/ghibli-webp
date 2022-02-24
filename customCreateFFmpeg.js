@@ -1,7 +1,6 @@
 const modulePath = require.cache[Object.keys(require.cache)[0]].paths[0];
 const customPath = `${modulePath}/@ffmpeg/ffmpeg/src/`;
 const { defaultArgs, baseOptions } = require(customPath + "./config");
-const { setLogging, setCustomLogger, log } = require(customPath + "./utils/log");
 const parseArgs = require(customPath + "./utils/parseArgs");
 const { defaultOptions, getCreateFFmpegCore } = require(customPath + "./node");
 const { version } = require(customPath + "../package.json");
@@ -26,6 +25,13 @@ module.exports = (_options = {}) => {
   let progress = optProgress;
   let duration = 0;
   let ratio = 0;
+  let customLogger = () => {};
+  const log = (type, message) => {
+    customLogger({ type, message });
+    if (logging) {
+      console.log(`[${type}] ${message}`);
+    }
+  };
   const detectCompletion = (message) => {
     if (message === "FFMPEG_END" && runResolve !== null) {
       runResolve();
@@ -224,11 +230,12 @@ module.exports = (_options = {}) => {
   };
 
   const setLogger = (_logger) => {
-    setCustomLogger(_logger);
+    customLogger = _logger;
   };
 
-  setLogging(logging);
-  setCustomLogger(logger);
+  const setLogging = (_logging) => {
+    logging = _logging;
+  };
 
   log("info", `use ffmpeg.wasm v${version}`);
 
