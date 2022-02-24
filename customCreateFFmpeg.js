@@ -244,6 +244,8 @@ module.exports = (_options = {}) => {
     logging = _logging;
   };
 
+  const isRunning = () => running;
+
   log("info", `use ffmpeg.wasm v${version}`);
 
   return {
@@ -256,5 +258,6 @@ module.exports = (_options = {}) => {
     exit,
     destroy,
     FS,
+    isRunning,
   };
 };

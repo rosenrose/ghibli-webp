@@ -2,10 +2,13 @@ const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
 const createFFmpeg = require("./customCreateFFmpeg");
+const ffmpegList = [];
+while (ffmpegList.length < 4) {
+  ffmpegList.push(createFFmpeg());
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
-const ffmpegList = [];
-
 app.get("/", (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.send(`<h1>Test port: ${PORT}</h1>`);
@@ -25,23 +28,34 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", async (socket) => {
-  // const ffmpeg = createFFmpeg({ log: true });
-
-  // if (!ffmpeg.isLoaded()) {
-  //   await ffmpeg.load();
-  //   ffmpeg.FS("mkdir", "webp");
-  //   ffmpeg.setProgress((progress) => {
-  //     socket.emit("progress", progress);
-  //   });
-  //   // ffmpeg.setLogger((log) => {
-  //   //   const { type, message } = log;
-  //   //   // if (log.type == "fferr") {
-  //   //   // socket.emit("log", log);
-  //   //   console.log(id, `[${type}] ${message}`);
-  //   //   // }
-  //   // });
-  //   socket.emit("load");
-  // }
+  for (let i = 0; ; i = (i + 1) % ffmpegList.length) {
+    if (ffmpeg.isLoaded()) {
+      if (ffmpeg.isRunning()) {
+        console.log(i, "running");
+        continue;
+      } else {
+        console.log(i, "ready");
+        socket.emit("ready");
+        break;
+      }
+    } else {
+      console.log(i, "load");
+      await ffmpeg.load();
+      ffmpeg.FS("mkdir", "webp");
+      ffmpeg.setProgress((progress) => {
+        socket.emit("progress", progress);
+      });
+      // ffmpeg.setLogger((log) => {
+      //   const { type, message } = log;
+      //   // if (log.type == "fferr") {
+      //   // socket.emit("log", log);
+      //   console.log(id, `[${type}] ${message}`);
+      //   // }
+      // });
+      socket.emit("ready");
+      break;
+    }
+  }
 
   socket.on("webp", (params, done) => {
     runWebp(ffmpeg, params, socket).then((webp) => {
