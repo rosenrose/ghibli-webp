@@ -2,6 +2,11 @@ const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
 const createFFmpeg = require("./customCreateFFmpeg");
+const pathToFfmpeg = require("ffmpeg-static");
+const { exec, execSync } = require("child_process");
+a = execSync(`${pathToFfmpeg} -version`);
+console.log(a);
+
 const ffmpegList = [];
 while (ffmpegList.length < 3) {
   ffmpegList.push(createFFmpeg());
