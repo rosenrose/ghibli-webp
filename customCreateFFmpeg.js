@@ -26,6 +26,7 @@ module.exports = (_options = {}) => {
   let duration = 0;
   let ratio = 0;
   let customLogger = () => {};
+
   const log = (type, message) => {
     customLogger({ type, message });
     if (logging) {
@@ -61,6 +62,7 @@ module.exports = (_options = {}) => {
       } else if (message.startsWith("video:")) {
         progress({ ratio: 1 });
         duration = 0;
+        ratio = 0;
       }
     }
     detectCompletion(message);

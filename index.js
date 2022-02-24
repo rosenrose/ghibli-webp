@@ -1,23 +1,11 @@
-const fs = require("fs");
 const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
-const exec = require("child_process").exec;
-const util = require("util");
-console.log();
-const p = exec(`ffmpeg -i`, (err) => {});
-// const p = exec(`ffmpeg -i "C:/Users/crazy/Pictures/Saved Pictures/15a2cdeab5831898ss1.jpg" 1.png -y`, (err) => {});
-p.stdout.on("data", (msg) => console.log("out\n", msg));
-// p.stderr.on("data", (msg) => console.log("err\n", util.inspect([...msg], { maxArrayLength: null })));
-p.stderr.on("data", (msg) =>
-  console.log(
-    "err\n",
-    msg.split("\r\n").filter((a) => a.length)
-  )
-);
-
+const createFFmpeg = require("./customCreateFFmpeg");
 const app = express();
 const PORT = process.env.PORT || 3000;
+const ffmpegList = [];
+
 app.get("/", (req, res) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.send(`<h1>Test port: ${PORT}</h1>`);
@@ -36,24 +24,44 @@ const io = require("socket.io")(httpServer, {
   },
 });
 
-try {
-  fs.mkdirSync("webp");
-} catch (e) {}
+io.on("connection", async (socket) => {
+  // const ffmpeg = createFFmpeg({ log: true });
 
-io.on("connection", (socket) => {
+  // if (!ffmpeg.isLoaded()) {
+  //   await ffmpeg.load();
+  //   ffmpeg.FS("mkdir", "webp");
+  //   ffmpeg.setProgress((progress) => {
+  //     socket.emit("progress", progress);
+  //   });
+  //   // ffmpeg.setLogger((log) => {
+  //   //   const { type, message } = log;
+  //   //   // if (log.type == "fferr") {
+  //   //   // socket.emit("log", log);
+  //   //   console.log(id, `[${type}] ${message}`);
+  //   //   // }
+  //   // });
+  //   socket.emit("load");
+  // }
+
   socket.on("webp", (params, done) => {
-    runWebp(params, socket).then((webp) => {
+    runWebp(ffmpeg, params, socket).then((webp) => {
       done(webp);
-      clear();
+      clear(ffmpeg);
     });
   });
 
   socket.on("disconnect", () => {
-    clear();
+    clear(ffmpeg);
+  });
+
+  socket.on("test", () => {
+    ffmpegList.push(createFFmpeg());
+    ffmpegList.at(-1).load();
+    console.log(ffmpegList.length);
   });
 });
 
-async function runWebp(params, socket) {
+async function runWebp(ffmpeg, params, socket) {
   const { time, title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
   const downloadPromises = [];
   let downloadCount = 1;
@@ -95,8 +103,19 @@ async function runWebp(params, socket) {
   return ffmpeg.FS("readFile", `webp/${time}/output.${webpGif}`).buffer;
 }
 
-function clear() {
-  fs.readdirSync("webp").forEach((dir) => {});
+function clear(ffmpeg) {
+  ffmpeg
+    .FS("readdir", "webp")
+    .filter((dir) => !dir.startsWith("."))
+    .forEach((dir) => {
+      ffmpeg
+        .FS("readdir", `webp/${dir}`)
+        .filter((file) => !file.startsWith("."))
+        .forEach((file) => {
+          ffmpeg.FS("unlink", `webp/${dir}/${file}`);
+        });
+      ffmpeg.FS("rmdir", `webp/${dir}`);
+    });
 }
 
 function getRandomInt(minInclude, maxExclude) {
