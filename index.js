@@ -1,7 +1,11 @@
+const fs = require("fs");
 const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
-const createFFmpeg = require("./customCreateFFmpeg");
+const exec = require("child_process").exec;
+const p = exec("ffmpeg -i", (err) => console.log(err));
+p.stdout.on("msg", (msg) => console.log("out", msg));
+p.stderr.on("msg", (msg) => console.log("err", msg));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,39 +27,22 @@ const io = require("socket.io")(httpServer, {
   },
 });
 
-io.on("connection", async (socket) => {
-  const ffmpeg = createFFmpeg({ log: true });
+fs.mkdir("webp");
 
-  if (!ffmpeg.isLoaded()) {
-    await ffmpeg.load();
-    ffmpeg.FS("mkdir", "webp");
-    ffmpeg.setProgress((progress) => {
-      socket.emit("progress", progress);
-    });
-    // ffmpeg.setLogger((log) => {
-    //   const { type, message } = log;
-    //   // if (log.type == "fferr") {
-    //   // socket.emit("log", log);
-    //   console.log(id, `[${type}] ${message}`);
-    //   // }
-    // });
-    socket.emit("load");
-  }
-
+io.on("connection", (socket) => {
   socket.on("webp", (params, done) => {
-    runWebp(ffmpeg, params, socket).then((webp) => {
+    runWebp(params, socket).then((webp) => {
       done(webp);
-      clear(ffmpeg);
+      clear();
     });
   });
 
   socket.on("disconnect", () => {
-    clear(ffmpeg);
-    ffmpeg.destroy();
+    clear();
   });
 });
 
-async function runWebp(ffmpeg, params, socket) {
+async function runWebp(params, socket) {
   const { time, title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
   const downloadPromises = [];
   let downloadCount = 1;
@@ -97,19 +84,8 @@ async function runWebp(ffmpeg, params, socket) {
   return ffmpeg.FS("readFile", `webp/${time}/output.${webpGif}`).buffer;
 }
 
-function clear(ffmpeg) {
-  ffmpeg
-    .FS("readdir", "webp")
-    .filter((dir) => !dir.startsWith("."))
-    .forEach((dir) => {
-      ffmpeg
-        .FS("readdir", `webp/${dir}`)
-        .filter((file) => !file.startsWith("."))
-        .forEach((file) => {
-          ffmpeg.FS("unlink", `webp/${dir}/${file}`);
-        });
-      ffmpeg.FS("rmdir", `webp/${dir}`);
-    });
+function clear() {
+  fs.readdirSync("webp").forEach((dir) => {});
 }
 
 function getRandomInt(minInclude, maxExclude) {
