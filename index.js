@@ -3,9 +3,18 @@ const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
 const exec = require("child_process").exec;
-const p = exec("ffmpeg -i", (err) => console.log(err));
-p.stdout.on("msg", (msg) => console.log("out", msg));
-p.stderr.on("msg", (msg) => console.log("err", msg));
+const util = require("util");
+console.log();
+const p = exec(`ffmpeg -i`, (err) => {});
+// const p = exec(`ffmpeg -i "C:/Users/crazy/Pictures/Saved Pictures/15a2cdeab5831898ss1.jpg" 1.png -y`, (err) => {});
+p.stdout.on("data", (msg) => console.log("out\n", msg));
+// p.stderr.on("data", (msg) => console.log("err\n", util.inspect([...msg], { maxArrayLength: null })));
+p.stderr.on("data", (msg) =>
+  console.log(
+    "err\n",
+    msg.split("\r\n").filter((a) => a.length)
+  )
+);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,7 +36,9 @@ const io = require("socket.io")(httpServer, {
   },
 });
 
-fs.mkdir("webp");
+try {
+  fs.mkdirSync("webp");
+} catch (e) {}
 
 io.on("connection", (socket) => {
   socket.on("webp", (params, done) => {
