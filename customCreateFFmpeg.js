@@ -230,6 +230,7 @@ module.exports = (_options = {}) => {
       Core = null;
       ffmpeg = null;
       runResolve = null;
+      socket = null;
     }
   };
 

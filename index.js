@@ -4,8 +4,8 @@ const axios = require("axios").default;
 const createFFmpeg = require("./customCreateFFmpeg");
 const pathToFfmpeg = require("ffmpeg-static");
 const { exec, execSync } = require("child_process");
-a = execSync(`${pathToFfmpeg} -version`);
-console.log(a);
+// a = execSync(`${pathToFfmpeg} -version`);
+// console.log(a);
 
 const ffmpegList = [];
 while (ffmpegList.length < 3) {
@@ -143,7 +143,6 @@ function clear(ffmpeg) {
       ffmpeg.FS("rmdir", `webp/${dir}`);
     });
   ffmpeg.selected = false;
-  ffmpeg.setSocket(null);
 }
 
 function getRandomInt(minInclude, maxExclude) {
