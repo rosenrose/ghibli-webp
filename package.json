@@ -21,6 +21,7 @@
     "@ffmpeg/ffmpeg": "^0.10.1",
     "axios": "^0.26.0",
     "express": "^4.17.3",
+    "ffmpeg-static": "^4.4.1",
     "require": "^0.4.4",
     "socket.io": "^4.4.1"
   }
