@@ -1,16 +1,9 @@
 const http = require("http");
 const express = require("express");
 const axios = require("axios").default;
-const createFFmpeg = require("./customCreateFFmpeg");
 const pathToFfmpeg = require("ffmpeg-static");
-const { exec, execSync } = require("child_process");
-// a = execSync(`${pathToFfmpeg} -version`);
-// console.log(a);
-
-const ffmpegList = [];
-while (ffmpegList.length < 3) {
-  ffmpegList.push(createFFmpeg());
-}
+const spawn = require("child_process").spawn;
+const decoder = new TextDecoder();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -32,67 +25,47 @@ const io = require("socket.io")(httpServer, {
   },
 });
 
-io.on("connection", async (socket) => {
-  for (let i = 0; ; ) {
-    if (ffmpegList[i].isLoaded()) {
-      if (ffmpegList[i].isRunning() || ffmpegList[i].selected) {
-        console.log(i, "running");
-        i = (i + 1) % ffmpegList.length;
-        continue;
-      } else {
-        ffmpegList[i].selected = true;
-        ffmpegList[i].setSocket(socket);
-        console.log(i, "ready");
-        socket.emit("ready", i);
-        break;
-      }
-    } else {
-      console.log(i, "load");
-      await ffmpegList[i].load();
-      ffmpegList[i].FS("mkdir", "webp");
-      ffmpegList[i].setProgress(handleProgress);
-      // ffmpegList[i].setLogger((log) => {
-      //   const { type, message } = log;
-      //   // if (log.type == "fferr") {
-      //   // socket.emit("log", log);
-      //   console.log(id, `[${type}] ${message}`);
-      //   // }
-      // });
-    }
-  }
-
-  socket.on("webp", (i, params, done) => {
-    runWebp(ffmpegList[i], params, socket).then((webp) => {
+io.on("connection", (socket) => {
+  socket.on("webp", (params, done) => {
+    runWebp(params, socket).then((webp) => {
       done(webp);
-      clear(ffmpegList[i]);
     });
-  });
-
-  socket.on("disconnect", () => {
-    ffmpegList
-      .filter((ffmpeg) => ffmpeg.isLoaded() && !ffmpeg.isRunning())
-      .forEach((ffmpeg) => {
-        clear(ffmpeg);
-      });
-  });
-
-  socket.on("test", () => {
-    ffmpegList.push(createFFmpeg());
-    ffmpegList.at(-1).load();
-    console.log(ffmpegList.length);
   });
 });
 
-function handleProgress(progress, socket) {
-  socket.emit("progress", progress);
-}
+async function runWebp(params, socket) {
+  const { title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
 
-async function runWebp(ffmpeg, params, socket) {
-  const { time, title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
+  const command =
+    webpGif === "webp"
+      ? ["-vf", `scale=${webpWidth}:-1`, "-loop", "0", "-preset", "drawing", "-qscale", "90"]
+      : ["-lavfi", `split[a][b];[a]scale=${gifWidth}:-1,palettegen[p];[b]scale=${gifWidth}:-1[g];[g][p]paletteuse`];
+  // prettier-ignore
+  const ffmpeg = spawn(pathToFfmpeg, [
+    "-framerate", "12",
+    "-f", "jpeg_pipe",
+    "-i", "pipe:",
+    ...command,
+    "-f", "webp",
+    "-c:v", "webp",
+    "pipe:1"
+  ]);
+
+  let webpBuffer = [];
+  let size = 0;
+  ffmpeg.stdout.on("data", (data) => {
+    // console.log((size += data.length));
+    webpBuffer = [...webpBuffer, ...data];
+  });
+  ffmpeg.stderr.on("data", (msg) => {
+    const progress = parseMessage(decoder.decode(msg));
+    if (progress) {
+      socket.emit("progress", progress);
+    }
+  });
+
   const downloadPromises = [];
   let downloadCount = 1;
-
-  ffmpeg.FS("mkdir", `webp/${time}`);
   for (let i = 0; i < Math.min(parseInt(duration), 84); i++) {
     const filename = `${(cut + i).toString().padStart(5, "0")}.jpg`;
 
@@ -101,50 +74,46 @@ async function runWebp(ffmpeg, params, socket) {
         axios(encodeURI(`${cloud}/${title}/${filename}`), {
           responseType: "arraybuffer",
         }).then((response) => {
-          ffmpeg.FS("writeFile", `webp/${time}/${filename}`, response.data);
           socket.emit("download", downloadCount++);
-          resolve();
+          resolve(response.data);
         });
       })
     );
   }
 
-  const command =
-    webpGif === "webp"
-      ? ["-vf", `scale=${webpWidth}:-1`, "-loop", "0", "-preset", "drawing", "-qscale", "90"]
-      : ["-lavfi", `split[a][b];[a]scale=${gifWidth}:-1,palettegen[p];[b]scale=${gifWidth}:-1[g];[g][p]paletteuse`];
+  for (let download of downloadPromises) {
+    const jpg = await download;
+    ffmpeg.stdin.write(jpg);
+  }
+  ffmpeg.stdin.end();
 
-  await Promise.all(downloadPromises);
-  await ffmpeg.run(
-    "-framerate",
-    "12",
-    "-pattern_type",
-    "glob",
-    "-i",
-    `webp/${time}/*.jpg`,
-    ...command,
-    `webp/${time}/output.${webpGif}`
-  );
-
-  return ffmpeg.FS("readFile", `webp/${time}/output.${webpGif}`).buffer;
-}
-
-function clear(ffmpeg) {
-  ffmpeg
-    .FS("readdir", "webp")
-    .filter((dir) => !dir.startsWith("."))
-    .forEach((dir) => {
-      ffmpeg
-        .FS("readdir", `webp/${dir}`)
-        .filter((file) => !file.startsWith("."))
-        .forEach((file) => {
-          ffmpeg.FS("unlink", `webp/${dir}/${file}`);
-        });
-      ffmpeg.FS("rmdir", `webp/${dir}`);
+  return new Promise((resolve) => {
+    ffmpeg.on("close", () => {
+      resolve(webpBuffer);
     });
-  ffmpeg.selected = false;
+  });
 }
 
 function getRandomInt(minInclude, maxExclude) {
   return Math.floor(Math.random() * (maxExclude - minInclude)) + minInclude;
+}
+
+function ts2sec(ts) {
+  const [h, m, s] = ts.split(":");
+  return parseFloat(h) * 60 * 60 + parseFloat(m) * 60 + parseFloat(s);
+}
+
+function parseMessage(message) {
+  let progress;
+
+  if (message.startsWith("frame")) {
+    // console.log(message);
+    const frame = message.split(" fps=")[0].split("frame=")[1].trim();
+    const ts = message.split("time=")[1].split(" ")[0];
+    const time = ts2sec(ts);
+    const speed = message.split("speed=")[1].split(" ")[0];
+    progress = { frame, time, speed };
+  }
+
+  return progress;
 }
