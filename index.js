@@ -4,6 +4,7 @@ const axios = require("axios").default;
 const pathToFfmpeg = require("ffmpeg-static");
 const spawn = require("child_process").spawn;
 const decoder = new TextDecoder();
+const util = require("util");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,75 +27,77 @@ const io = require("socket.io")(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  socket.on("webp", (params, done) => {
-    runWebp(params, socket).then((webp) => {
-      done(webp);
+  socket.on("webp", async (params, done) => {
+    const { title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
+
+    // prettier-ignore
+    const command =
+      webpGif === "webp"
+        ? [
+            "-vf", `scale=${webpWidth}:-1`,
+            "-loop", "0",
+            "-preset", "drawing",
+            "-qscale", "90",
+            "-f", "webp",
+            "-c:v", "webp",
+          ]
+        : [
+            "-lavfi", `split[a][b];[a]scale=${gifWidth}:-1,palettegen[p];[b]scale=${gifWidth}:-1[g];[g][p]paletteuse`,
+            "-f", "gif",
+            "-c:v", "gif",
+          ];
+    // prettier-ignore
+    const ffmpeg = spawn(pathToFfmpeg, [
+      "-framerate", "12",
+      "-f", "jpeg_pipe",
+      "-i", "pipe:",
+      ...command,
+      // "-progress", "pipe:2",
+      "pipe:1"
+    ]);
+
+    let size = 0;
+    ffmpeg.stdout.on("data", (data) => {
+      // console.log((size += data.length));
+      socket.emit("transfer", data);
     });
+    ffmpeg.stderr.on("data", (msg) => {
+      // console.log(util.inspect(decoder.decode(msg), { maxArrayLength: null }));
+      // console.log(decoder.decode(msg).split(/\s+$/));
+      const progress = parseMessage(decoder.decode(msg));
+      if (progress) {
+        socket.emit("progress", progress);
+      }
+    });
+
+    const downloadPromises = [];
+    let downloadCount = 1;
+    for (let i = 0; i < Math.min(parseInt(duration), 84); i++) {
+      const filename = `${(cut + i).toString().padStart(5, "0")}.jpg`;
+
+      downloadPromises.push(
+        new Promise((resolve) => {
+          axios(encodeURI(`${cloud}/${title}/${filename}`), {
+            responseType: "arraybuffer",
+          }).then((response) => {
+            socket.emit("download", downloadCount++);
+            resolve(response.data);
+          });
+        })
+      );
+    }
+
+    for (let download of downloadPromises) {
+      const jpg = await download;
+      ffmpeg.stdin.write(jpg);
+    }
+    ffmpeg.stdin.end();
+
+    ffmpeg.on("close", done);
   });
 });
 
-async function runWebp(params, socket) {
-  const { title, cut, duration, webpGif, cloud, webpWidth, gifWidth } = params;
-
-  const command =
-    webpGif === "webp"
-      ? ["-vf", `scale=${webpWidth}:-1`, "-loop", "0", "-preset", "drawing", "-qscale", "90"]
-      : ["-lavfi", `split[a][b];[a]scale=${gifWidth}:-1,palettegen[p];[b]scale=${gifWidth}:-1[g];[g][p]paletteuse`];
-  // prettier-ignore
-  const ffmpeg = spawn(pathToFfmpeg, [
-    "-framerate", "12",
-    "-f", "jpeg_pipe",
-    "-i", "pipe:",
-    ...command,
-    "-f", "webp",
-    "-c:v", "webp",
-    "pipe:1"
-  ]);
-
-  let webpBuffer = [];
-  let size = 0;
-  ffmpeg.stdout.on("data", (data) => {
-    // console.log((size += data.length));
-    webpBuffer = [...webpBuffer, ...data];
-  });
-  ffmpeg.stderr.on("data", (msg) => {
-    const progress = parseMessage(decoder.decode(msg));
-    if (progress) {
-      socket.emit("progress", progress);
-    }
-  });
-
-  const downloadPromises = [];
-  let downloadCount = 1;
-  for (let i = 0; i < Math.min(parseInt(duration), 84); i++) {
-    const filename = `${(cut + i).toString().padStart(5, "0")}.jpg`;
-
-    downloadPromises.push(
-      new Promise((resolve) => {
-        axios(encodeURI(`${cloud}/${title}/${filename}`), {
-          responseType: "arraybuffer",
-        }).then((response) => {
-          socket.emit("download", downloadCount++);
-          resolve(response.data);
-        });
-      })
-    );
-  }
-
-  for (let download of downloadPromises) {
-    const jpg = await download;
-    ffmpeg.stdin.write(jpg);
-  }
-  ffmpeg.stdin.end();
-
-  return new Promise((resolve) => {
-    ffmpeg.on("close", () => {
-      resolve(webpBuffer);
-    });
-  });
-}
-
-function getRandomInt(minInclude, maxExclude) {
+function randomInt(minInclude, maxExclude) {
   return Math.floor(Math.random() * (maxExclude - minInclude)) + minInclude;
 }
 
